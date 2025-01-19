@@ -1,77 +1,68 @@
 // load all blogs
 document.addEventListener("DOMContentLoaded", () => {
   loadBlogs();
+  tabSwitching()
+})
 
-  // Dropdown menu functionality
-  const moreButtons = document.querySelectorAll('.more-button');
-  console.log("more-button: ", moreButtons)
-  let activeDropdown = null;
-
-  moreButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const dropdown = button.querySelector('.dropdown-menu');
-      
-      if (activeDropdown && activeDropdown !== dropdown) {
-        activeDropdown.classList.remove('show');
-      }
-      
-      dropdown.classList.toggle('show');
-      activeDropdown = dropdown;
+function getMoreBtns() {
+    // Dropdown menu functionality
+    const moreButtons = document.querySelectorAll('.more-button');
+    let activeDropdown = null;
+    moreButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dropdown = button.querySelector('.dropdown-menu');
+        
+        if (activeDropdown && activeDropdown !== dropdown) {
+          activeDropdown.classList.remove('show');
+        }
+        
+        dropdown.classList.toggle('show');
+        activeDropdown = dropdown;
+      });
     });
-  });
-
-  // Close dropdown when clicking outside
-  document.addEventListener('click', () => {
-    if (activeDropdown) {
-      activeDropdown.classList.remove('show');
-      activeDropdown = null;
-    }
-  });
-
-  // Handle dropdown item clicks
-  document.querySelectorAll('.dropdown-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const action = e.currentTarget.textContent.trim();
-      const blog = e.currentTarget.closest('.blog');
-      const title = blog.querySelector('.blog-title').textContent;
-
-      switch (action) {
-        case 'View Blog':
-          console.log(`Viewing blog: ${title}`);
-          break;
-        case 'Edit':
-          console.log(`Editing blog: ${title}`);
-          break;
-        // case 'Delete':
-        //   if (confirm(`Are you sure you want to delete "${title}"?`)) {
-        //     console.log(`Deleting blog: ${title}`);
-        //     // blog.remove();
-        //     deleteBlog(id)
-        //   }
-          break;
-      }
-
+  
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
       if (activeDropdown) {
         activeDropdown.classList.remove('show');
         activeDropdown = null;
       }
     });
-  });
-
-})
-
+  
+    // Handle dropdown item clicks
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = e.currentTarget.textContent.trim();
+        const blog = e.currentTarget.closest('.blog');
+        const title = blog.querySelector('.blog-title').textContent;
+  
+        switch (action) {
+          case 'View Blog':
+            console.log(`Viewing blog: ${title}`);
+            break;
+        }
+  
+        if (activeDropdown) {
+          activeDropdown.classList.remove('show');
+          activeDropdown = null;
+        }
+      });
+    });
+}
 // Tab switching
-const tabButtons = document.querySelectorAll('.tab-button');
-tabButtons.forEach(button => {
-  button.addEventListener('click', () => {
-    tabButtons.forEach(btn => btn.classList.remove('active'));
-    button.classList.add('active');
-    const filter = button.getAttribute("data-tab");
-    loadBlogs(filter);
+function tabSwitching() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      const filter = button.getAttribute("data-tab");
+      loadBlogs(filter);
+    });
   });
-});
+}
 
 // Search functionality
 const searchToggle = document.getElementById('searchToggle');
@@ -90,6 +81,8 @@ function hideSearch() {
   searchToggle.style.display = 'block';
   searchInputContainer.style.display = 'none';
   tabButtonsContainer.style.display = 'flex';
+  const type = document.querySelector('.btn-text.tab-button.active').getAttribute("data-tab");
+  loadBlogs(type);
 }
 
 searchToggle.addEventListener('click', showSearch);
@@ -106,15 +99,23 @@ function showBlogEditor() {
 
     editingBlogId = null; // Reset editing mode
 }
-function loadBlogs(type) {
+function loadBlogs(type, qry) {
   type = type || 'published'
   let blogsContainer = document.getElementById("blogsContainer");
   blogsContainer.innerHTML = ""; // Clear previous blogs before loading
 
   let blogs = JSON.parse(localStorage.getItem("blogs")) || [];
-  const filteredBlogs = blogs.filter(blog => {
-    return type === "published" ? blog.publish : !blog.publish;
-  });
+  if(qry && type == 'both')
+    filteredBlogs = blogs.filter(blog => blog.title.toLowerCase().includes(qry.toLowerCase()));
+  else
+    var filteredBlogs = blogs.filter(blog => {
+      return type === "published" ? blog.publish : !blog.publish;
+    });
+
+  var len = blogs.length - filteredBlogs.length
+  document.querySelector(".publish-count").textContent = type == 'published' ? filteredBlogs.length : len;
+  document.querySelector(".draft-count").textContent = type == 'drafted' ? filteredBlogs.length : len;
+
   if (blogs.length === 0) {
       blogsContainer.innerHTML = 
       `<div style="margin-top: 72px;text-align: center;">
@@ -136,7 +137,7 @@ function loadBlogs(type) {
 
       blogElement.innerHTML = `
           <div class="blog-header" id="blog-header-${blog.id}">
-              <div class="blog-date">Sep 26, 2024 at 06:56 AM</div>
+              <div class="blog-date">${blog.createdAt}</div>
               <div class="more-button">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="1"/>
@@ -144,7 +145,7 @@ function loadBlogs(type) {
                   <circle cx="12" cy="19" r="1"/>
                   </svg>
                   <div class="dropdown-menu">
-                      <div class="dropdown-item">
+                      <div class="dropdown-item view-${blog.id}">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                           <polyline points="15 3 21 3 21 9"></polyline>
@@ -152,7 +153,7 @@ function loadBlogs(type) {
                           </svg>
                           View Blog
                       </div>
-                      <div class="dropdown-item">
+                      <div class="dropdown-item" onClick='openEditor(${JSON.stringify(blog).replace(/'/g, "&#39;")})'>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -183,14 +184,18 @@ function loadBlogs(type) {
       `;
       blogsContainer.appendChild(blogElement);
       const publishStatus = document.getElementById(`blog-status-${blog.id}`);
-      console.log("publishstatus: ", publishStatus)
       if(blog.publish) {
         publishStatus.style.visibility = "visible";
       } else {
         publishStatus.style.display = "none";
       }
-      
+
+      if(type == 'drafted') {
+        document.getElementsByClassName(`view-${blog.id}`)[0].style.display = "none";
+      }
   });
+  // Reinitialize dropdown menu functionality after loading blogs
+  getMoreBtns();
 }
 
 // blog Editor Modal - add blog js
@@ -198,12 +203,16 @@ const editorModal = document.getElementById('editorModal');
 const publishButton = document.getElementById('publishButton');
 const publishMenu = document.getElementById('publishMenu');
 const toolbarButtons = document.querySelectorAll('.toolbar-button');
-    
-const openEditor = document.getElementById('openEditor');
-openEditor.addEventListener('click', () => {
+
+function openEditor(blog) {
   editorModal.classList.add('show');
+  if(blog) {
+    document.querySelector('.title-input').value = blog.title;
+    document.querySelector('.content-area').value = blog.title;
+    document.querySelector('#blogId').textContent = blog.id;
+  }
   document.body.style.overflow = 'hidden';
-});
+}
 
 function closeEditor() {
   editorModal.classList.remove('show');
@@ -238,7 +247,7 @@ function saveBlog(type) {
   var title = document.querySelector(".title-input").value.trim();
   var content = document.querySelector(".content-area").value.trim();
   var errorMessages = document.getElementById("errorMessages");
-
+  var blogId = document.querySelector('#blogId').textContent;
   errorMessages.innerHTML = ""; // Clear previous errors
 
   if (!title || !content) {
@@ -251,24 +260,37 @@ function saveBlog(type) {
   }
 
   let blogs = JSON.parse(localStorage.getItem("blogs")) || [];
-  let createdAt = new Date().toLocaleDateString();
-  // if (editingBlogId !== null) {
-  //     // If editing, update the existing blog
-  //     let blogIndex = blogs.findIndex(blog => blog.id === editingBlogId);
-  //     if (blogIndex !== -1) {
-  //         blogs[blogIndex] = { id: editingBlogId, title, userName, content, createdAt };
-  //     }
-  // } else {
+
+  if (blogId) {
+      // If editing, update the existing blog
+      let blogIndex = blogs.findIndex(blog => blog.id == blogId);
+      if (blogIndex !== -1) {
+          // blogs[blogIndex] = { id: blogId, title, content, createdAt: , publish: type };
+          blogs[blogIndex].title = title;
+          blogs[blogIndex].content = content;
+          blogs[blogIndex].publish = type;
+      }
+  } else {
       // If adding new blog
-      let blogId = new Date().getTime(); // Unique ID
-      blogs.push({ id: blogId, title, content, createdAt, publish: type });
-  // }
+      let createdAt = new Date();
+      // Format the date as "Sep 26, 2024 at 06:56 AM"
+      let formattedDate = createdAt.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }) + " at " + createdAt.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      blogId = new Date().getTime(); // Unique ID
+      blogs.push({ id: blogId, title, content, createdAt: formattedDate, publish: type });
+  }
 
   localStorage.setItem("blogs", JSON.stringify(blogs));
-  loadBlogs();
-  title = "";
-  content = ""
+  document.getElementById("editorForm").reset(); // Clear the form
   closeEditor();
+  loadBlogs();
 }
 
 // Function to delete a blog
@@ -281,3 +303,11 @@ function deleteBlog(id) {
     loadBlogs();
   }
 }
+
+//search blog
+// Add event listener to the search input
+document.querySelector(".search-input").addEventListener("input", event => {
+  const searchQuery = event.target.value;
+  // const type = document.querySelector('.btn-text.tab-button.active').getAttribute("data-tab");
+  loadBlogs('both',searchQuery);
+});
