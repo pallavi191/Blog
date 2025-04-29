@@ -108,4 +108,4 @@ This project showcases a basic yet functional implementation of a blogging platf
 
 
 # You can find live site here:
-https://blog-editor-one.vercel.app/
+blog-mu-mauve.vercel.app
